@@ -3,6 +3,7 @@ from distutils.version import LooseVersion
 from typing import Callable, Dict, Optional, Union
 
 import torch
+from forward import predictio
 from adv_lib.utils import BackwardCounter, ForwardCounter
 from adv_lib.utils.attack_utils import _default_metrics
 from torch import Tensor, nn
@@ -40,11 +41,6 @@ def run_attack(
 
 #####################################################################################################################
     for i, (images, labels) in enumerate(tqdm(loader, ncols=80, total=loader_length)):
-        logits_arr = []
-        labels_arr = []
-        attack_label_arr = []
-
-##############################################-NORMAL-TEST-BLOCK###################################################
         for k in range(len(images)):
             image = images[k]
             label = labels[k]
@@ -62,7 +58,13 @@ def run_attack(
             else:
                 attack_label_arr.append(label)
 
-            logits_arr.append(model(image))
+            logits_arr.append(
+                prediction(
+                    model,
+                    input,
+                    target
+                )
+            )
             labels_arr.append(label)
 
         logits = torch.zeros(19, 898, 1796)
