@@ -11,8 +11,14 @@ import torch.nn.parallel
 import torch.utils.data
 import torch.nn as nn
 
-from model.pspnet import PSPNet_DDCAT
-from util import dataset, transform, config
+def get_args():
+    return {
+        "classes": 19,
+        "crop_h": 449,
+        "crop_w": 449,
+        "scales": [1.0],
+        "base_size": 1024
+    }
 
 cv2.ocl.setUseOpenCL(False)
 
@@ -25,12 +31,7 @@ std = [item * value_scale for item in std]
 mean_origin = [0.485, 0.456, 0.406]
 std_origin = [0.229, 0.224, 0.225]
 
-def get_args():
-    return {
-        "classes": 19,
-        "crop_h": 449,
-        "crop_w": 449
-    }
+args = get_args()
 
 def attack_runer(input, target, model, attack):
     return attack(model=model, inputs=image, labels=attack_label_arr[k], targeted=False)
@@ -86,7 +87,7 @@ def net_process(model, image, target, mean, std=None, attack=None):
 
     output = output.data.cpu().numpy()
     output = output.transpose(1, 2, 0)
-    
+
     return output
 
 
@@ -110,7 +111,7 @@ def scale_process(model, image, target, classes, crop_h, crop_w, h, w, mean, std
     grid_h = int(np.ceil(float(new_h-crop_h)/stride_h) + 1)
     grid_w = int(np.ceil(float(new_w-crop_w)/stride_w) + 1)
 
-    prediction_crop = np.zeros((new_h, new_w, classes), dtype=float)
+    prediction_crop = np.zeros((new_h, new_w, args['classes']), dtype=float)
 
     count_crop = np.zeros((new_h, new_w), dtype=float)
 
@@ -133,8 +134,6 @@ def scale_process(model, image, target, classes, crop_h, crop_w, h, w, mean, std
     return prediction
 
 def prediction(model, input, target, attack=None):
-    args = get_args()
-
     input = np.squeeze(input.numpy(), axis=0)
     target = np.squeeze(target.numpy(), axis=0)
 
@@ -142,10 +141,10 @@ def prediction(model, input, target, attack=None):
     image = cv2.resize(image, (1024, 512), interpolation=cv2.INTER_LINEAR)
 
     h, w, _ = image.shape
-    prediction = np.zeros((h, w, classes), dtype=float)
+    prediction = np.zeros((h, w, args['classes']), dtype=float)
 
-    for scale in scales:
-        long_size = round(scale * base_size)
+    for scale in args['scales']:
+        long_size = round(scale * args['base_size'])
         new_h = long_size
         new_w = long_size
         if h > w:
@@ -158,11 +157,11 @@ def prediction(model, input, target, attack=None):
 
         prediction += scale_process(
             model=model,
-            image_scale=image_scale,
-            target_scale=target_scale,
-            classes=args.classes,
-            crop_h=args.crop_h,
-            crop_w=args.crop_w,
+            image=image_scale,
+            target=target_scale,
+            classes=args['classes'],
+            crop_h=args['crop_h'],
+            crop_w=args['crop_w'],
             h=h,
             w=w,
             mean=mean,

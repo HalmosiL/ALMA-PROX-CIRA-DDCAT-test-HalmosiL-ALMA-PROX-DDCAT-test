@@ -32,6 +32,6 @@ def load_model(path, device):
         pretrained=False
     )
 
-    model.load_state_dict(torch.load(path, map_location=device))
+    model.load_state_dict(torch.load(path, map_location=device)["state_dict"], strict=False)
     model = model.to(device).eval()
     return model
